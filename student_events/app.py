@@ -6,7 +6,7 @@ DB_NAME = "events.db"
 
 def get_events():
     with shelve.open(DB_NAME) as db:
-        return dict(db)  # returns a dict of all events
+        return dict(db)  
 
 @app.route("/")
 def home():
@@ -31,13 +31,39 @@ def vote(event_id):
 
     with shelve.open(DB_NAME, writeback=True) as db:
         event = db[event_id]
-        if email not in event["votes"]:  # prevent duplicate votes
+        if email not in event["votes"]: 
             event["votes"].append(email)
         db[event_id] = event
 
     return redirect("/")
 
+@app.route("/calendar")
+def calendar():
+    headers = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+    days = [{"name": str(i), "enabled": True} for i in range(1, 31)]
+
+    items = []
+    events = get_events()
+    for event_id, event in events.items():
+        try:
+            day = int(event["date"].split("-")[2])  
+        except:
+            continue
+
+        item = {
+            "title": event["title"],
+            "className": "task--info",
+            "startCol": (day % 7) + 1,  
+            "startRow": 1,
+            "len": 1,
+            "isBottom": False,
+            "detailHeader": event["title"],
+            "detailContent": event["description"]
+        }
+        items.append(item)
+
+    return render_template("calendar.html", headers=headers, days=days, items=items)
+
 if __name__ == "__main__":
-    import os 
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host = "0.0.0.0", port = port, debug=True)
+    app.run(debug=True)
